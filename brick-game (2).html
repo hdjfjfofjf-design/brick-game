@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Brick Breaker Game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { margin:0; background:#111; overflow:hidden; font-family: Arial, sans-serif; position: relative; }
+canvas { display:block; margin:0 auto; background:#000; }
+#playBtn { position:absolute; bottom:40px; left:50%; transform:translateX(-50%); padding:12px 24px; background: linear-gradient(45deg,#ff9800,#ffc107); color:#fff; font-size:18px; font-weight:bold; border:none; border-radius:8px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.6); transition:all 0.2s ease-in-out; }
+#playBtn:hover { background: linear-gradient(45deg,#e68900,#ffb300); transform: scale(1.05);}
+.move-btn { position:absolute; bottom:100px; width:60px; height:60px; border-radius:50%; background: linear-gradient(45deg,#28a745,#00e676); color:#fff; font-size:28px; font-weight:bold; border:none; cursor:pointer; display:flex; justify-content:center; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.6); transition:all 0.2s ease-in-out;}
+.move-btn:hover { transform: scale(1.1); background: linear-gradient(45deg,#00c853,#00e676);}
+.move-btn:active { transform: scale(0.95); box-shadow:0 2px 6px rgba(0,0,0,0.6);}
+#leftBtn { left:20px; }
+#rightBtn { right:20px; }
+#giga-pub-ad { text-align:center; margin:10px auto; }
+</style>
+<script async src="https://cdn.giga.pub/ads.js?id=2478"></script>
+</head>
+<body>
+<canvas id="gameCanvas" width="360" height="240"></canvas>
+<div id="giga-pub-ad"></div>
+<button id="playBtn">Play</button>
+<button id="leftBtn" class="move-btn">◀</button>
+<button id="rightBtn" class="move-btn">▶</button>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const playBtn = document.getElementById("playBtn");
+const leftBtn = document.getElementById("leftBtn");
+const rightBtn = document.getElementById("rightBtn");
+
+let ballRadius = 8, x=canvas.width/2, y=canvas.height-20, dx=2, dy=-2;
+let paddleHeight=8, paddleWidth=60, paddleX=(canvas.width-paddleWidth)/2;
+let rightPressed=false, leftPressed=false;
+let brickRowCount=4, brickColumnCount=6, brickWidth=45, brickHeight=15, brickPadding=8, brickOffsetTop=20, brickOffsetLeft=20;
+let score=0, lives=3, running=false;
+
+const brickColors=["#e91e63","#9c27b0","#3f51b5","#03a9f4","#009688","#8bc34a","#ffeb3b","#ff9800","#795548"];
+let bricks=[];
+
+function initBricks(){
+    bricks=[];
+    for(let c=0;c<brickColumnCount;c++){
+        bricks[c]=[];
+        for(let r=0;r<brickRowCount;r++){
+            let color=brickColors[Math.floor(Math.random()*brickColors.length)];
+            bricks[c][r]={x:0,y:0,status:1,color:color};
+        }
+    }
+}
+initBricks();
+
+document.addEventListener("keydown",e=>{ if(e.key==="ArrowRight") rightPressed=true; if(e.key==="ArrowLeft") leftPressed=true; });
+document.addEventListener("keyup",e=>{ if(e.key==="ArrowRight") rightPressed=false; if(e.key==="ArrowLeft") leftPressed=false; });
+
+leftBtn.addEventListener("mousedown",()=>leftPressed=true);
+leftBtn.addEventListener("mouseup",()=>leftPressed=false);
+rightBtn.addEventListener("mousedown",()=>rightPressed=true);
+rightBtn.addEventListener("mouseup",()=>rightPressed=false);
+
+leftBtn.addEventListener("touchstart",e=>{ e.preventDefault(); leftPressed=true; });
+leftBtn.addEventListener("touchend",e=>{ e.preventDefault(); leftPressed=false; });
+rightBtn.addEventListener("touchstart",e=>{ e.preventDefault(); rightPressed=true; });
+rightBtn.addEventListener("touchend",e=>{ e.preventDefault(); rightPressed=false; });
+
+function collisionDetection(){
+    for(let c=0;c<brickColumnCount;c++){
+        for(let r=0;r<brickRowCount;r++){
+            let b=bricks[c][r];
+            if(b.status===1){
+                if(x>b.x && x<b.x+brickWidth && y>b.y && y<b.y+brickHeight){
+                    dy=-dy; b.status=0; score++;
+                    if(score===brickRowCount*brickColumnCount){ showAd(); alert("YOU WIN!"); resetGame();}
+                }
+            }
+        }
+    }
+}
+
+function drawBall(){ ctx.beginPath(); ctx.arc(x,y,ballRadius,0,Math.PI*2); ctx.fillStyle="#fff"; ctx.fill(); ctx.closePath(); }
+function drawPaddle(){ ctx.beginPath(); ctx.rect(paddleX,canvas.height-paddleHeight,paddleWidth,paddleHeight); ctx.fillStyle="#0095DD"; ctx.fill(); ctx.closePath(); }
+function drawBricks(){ for(let c=0;c<brickColumnCount;c++){ for(let r=0;r<brickRowCount;r++){ if(bricks[c][r].status===1){ let brickX=(c*(brickWidth+brickPadding))+brickOffsetLeft; let brickY=(r*(brickHeight+brickPadding))+brickOffsetTop; bricks[c][r].x=brickX; bricks[c][r].y=brickY; ctx.beginPath(); ctx.rect(brickX,brickY,brickWidth,brickHeight); ctx.fillStyle=bricks[c][r].color; ctx.fill(); ctx.closePath(); }}}}
+function drawScore(){ ctx.font="14px Arial"; ctx.fillStyle="#fff"; ctx.fillText("Score: "+score,8,18);}
+function drawLives(){ ctx.font="14px Arial"; ctx.fillStyle="#fff"; ctx.fillText("Lives: "+lives,canvas.width-65,18);}
+
+function draw(){
+    if(!running) return;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawBricks(); drawBall(); drawPaddle(); drawScore(); drawLives(); collisionDetection();
+
+    if(x+dx>canvas.width-ballRadius||x+dx<ballRadius) dx=-dx;
+    if(y+dy<ballRadius) dy=-dy;
+    else if(y+dy>canvas.height-ballRadius){
+        if(x>paddleX && x<paddleX+paddleWidth) dy=-dy;
+        else{ lives--; if(!lives){ showAd(); alert("GAME OVER"); resetGame(); } else{ x=canvas.width/2; y=canvas.height-20; dx=2; dy=-2; paddleX=(canvas.width-paddleWidth)/2; } }
+    }
+
+    if(rightPressed && paddleX<canvas.width-paddleWidth) paddleX+=6;
+    else if(leftPressed && paddleX>0) paddleX-=6;
+
+    x+=dx; y+=dy;
+    requestAnimationFrame(draw);
+}
+
+function resetGame(){ running=false; playBtn.style.display="block"; score=0; lives=3; initBricks(); x=canvas.width/2; y=canvas.height-20; dx=2; dy=-2; paddleX=(canvas.width-paddleWidth)/2; }
+
+function showAd(){ if(window.gigaPub){ gigaPub.render("giga-pub-ad"); } }
+
+playBtn.addEventListener("click",()=>{ playBtn.style.display="none"; running=true; showAd(); draw(); });
+
+</script>
+</body>
+</html>
